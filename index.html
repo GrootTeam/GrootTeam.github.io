@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Groot — open-weight reasoning models</title>
+<meta name="description" content="Groot is a family of four open-weight Mixture-of-Experts models for reasoning, coding and tool use, built from Qwen, GLM and DeepSeek models.">
+<meta property="og:title" content="Groot — open-weight reasoning models">
+<meta property="og:description" content="Four open-weight MoE models for reasoning, coding and tool use. Smaller models, serious capabilities.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://grootteam.github.io/">
+<meta property="og:image" content="https://grootteam.github.io/assets/title.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/favicon.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..700&family=Outfit:wght@300..700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bark: #0d1512;
+    --bark-deep: #070c0a;
+    --moss: #15241f;
+    --sap: #5fd6a5;
+    --sap-dim: #3da87d;
+    --amber: #f0b954;
+    --bone: #eef5f0;
+    --bone-dim: #a8bdb2;
+    --line: rgba(95, 214, 165, .16);
+    --display: "Fraunces", Georgia, serif;
+    --body: "Outfit", "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --shell: min(1180px, 92vw);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--bark);
+    color: var(--bone);
+    font-family: var(--body);
+    font-size: clamp(1rem, .96rem + .2vw, 1.09rem);
+    line-height: 1.65;
+    font-weight: 300;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: .5;
+    background:
+      radial-gradient(60rem 40rem at 78% -10%, rgba(95, 214, 165, .13), transparent 65%),
+      radial-gradient(45rem 38rem at 6% 12%, rgba(240, 185, 84, .08), transparent 60%),
+      radial-gradient(50rem 50rem at 50% 108%, rgba(61, 168, 125, .12), transparent 60%);
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: .035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  main, header, footer { position: relative; z-index: 1; }
+
+  a { color: var(--sap); text-decoration: none; }
+  a:hover { color: var(--amber); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+
+  .shell { width: var(--shell); margin-inline: auto; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .72rem;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--sap-dim);
+  }
+
+  /* ---------- nav ---------- */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    backdrop-filter: blur(14px);
+    background: color-mix(in srgb, var(--bark-deep) 82%, transparent);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .topbar .shell {
+    display: flex;
+    align-items: center;
+    gap: 1.6rem;
+    min-height: 62px;
+  }
+
+  .mark {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 1.22rem;
+    letter-spacing: -.01em;
+    color: var(--bone);
+    margin-right: auto;
+  }
+  .mark span { color: var(--sap); }
+
+  .topbar nav {
+    display: flex;
+    gap: 1.5rem;
+    font-size: .88rem;
+  }
+  .topbar nav a { color: var(--bone-dim); }
+  .topbar nav a:hover { color: var(--sap); }
+
+  .pill {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: .34rem 1rem;
+    font-size: .84rem;
+    color: var(--bone);
+    background: rgba(95, 214, 165, .06);
+    transition: border-color .25s, background .25s, transform .25s;
+  }
+  .pill:hover {
+    border-color: var(--sap);
+    background: rgba(95, 214, 165, .14);
+    transform: translateY(-1px);
+    color: var(--bone);
+  }
+
+  /* ---------- hero ---------- */
+  .hero {
+    padding: clamp(3.2rem, 8vh, 6.5rem) 0 clamp(2.6rem, 6vh, 4.4rem);
+    position: relative;
+  }
+
+  .hero::before {
+    content: "";
+    position: absolute;
+    width: 36rem;
+    height: 36rem;
+    right: -14rem;
+    top: -8rem;
+    border-radius: 48% 52% 60% 40% / 55% 45% 55% 45%;
+    border: 1px solid var(--line);
+    animation: drift 34s ease-in-out infinite alternate;
+    pointer-events: none;
+  }
+
+  @keyframes drift {
+    to { transform: rotate(26deg) scale(1.08); }
+  }
+
+  .hero-logo {
+    width: clamp(220px, 34vw, 330px);
+    height: auto;
+    display: block;
+    margin-bottom: 2.2rem;
+    filter: drop-shadow(0 10px 40px rgba(0, 0, 0, .45));
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-size: clamp(2.6rem, 1.6rem + 4.4vw, 5.1rem);
+    line-height: .99;
+    letter-spacing: -.028em;
+    margin: 0 0 1.4rem;
+    max-width: 19ch;
+  }
+
+  h1 em {
+    font-style: italic;
+    font-weight: 300;
+    color: var(--sap);
+  }
+
+  .lede {
+    font-size: clamp(1.06rem, 1rem + .38vw, 1.3rem);
+    color: var(--bone-dim);
+    max-width: 56ch;
+    margin: 0 0 2.4rem;
+  }
+
+  .cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .85rem;
+    align-items: center;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    padding: .82rem 1.5rem;
+    border-radius: 2px;
+    font-size: .95rem;
+    font-weight: 400;
+    border: 1px solid transparent;
+    transition: transform .25s, background .25s, border-color .25s, color .25s;
+  }
+
+  .btn-primary {
+    background: var(--sap);
+    color: var(--bark-deep);
+    font-weight: 500;
+  }
+  .btn-primary:hover {
+    background: var(--amber);
+    color: var(--bark-deep);
+    transform: translateY(-2px);
+  }
+
+  .btn-ghost {
+    border-color: var(--line);
+    color: var(--bone);
+  }
+  .btn-ghost:hover {
+    border-color: var(--sap);
+    color: var(--sap);
+    transform: translateY(-2px);
+  }
+
+  .capability-strip {
+    margin-top: clamp(2.8rem, 6vh, 4.2rem);
+    display: grid;
+    gap: 1px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+
+  .capability-strip div {
+    background: var(--bark);
+    padding: 1.5rem 1.4rem;
+  }
+
+  .capability-strip h3 {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 1.13rem;
+    margin: .7rem 0 .45rem;
+  }
+
+  .capability-strip p {
+    margin: 0;
+    font-size: .92rem;
+    color: var(--bone-dim);
+  }
+
+  /* ---------- sections ---------- */
+  section { padding: clamp(3.4rem, 9vh, 6.4rem) 0; }
+
+  .section-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 2.6rem;
+    align-items: baseline;
+    border-top: 1px solid var(--line);
+    padding-top: 1.8rem;
+    margin-bottom: 2.6rem;
+  }
+
+  h2 {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: clamp(1.85rem, 1.4rem + 1.5vw, 2.9rem);
+    line-height: 1.08;
+    letter-spacing: -.02em;
+    margin: 0;
+  }
+
+  .section-head p {
+    margin: 0;
+    color: var(--bone-dim);
+    max-width: 44ch;
+    font-size: .98rem;
+  }
+
+  /* ---------- model cards ---------- */
+  .models {
+    display: grid;
+    gap: 1.2rem;
+    grid-template-columns: repeat(auto-fit, minmax(265px, 1fr));
+  }
+
+  .card {
+    position: relative;
+    border: 1px solid var(--line);
+    background: linear-gradient(170deg, var(--moss), var(--bark) 68%);
+    padding: 1.7rem 1.5rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: .9rem;
+    overflow: hidden;
+    transition: transform .3s, border-color .3s;
+  }
+
+  .card:hover { transform: translateY(-4px); border-color: var(--sap-dim); }
+
+  .card::after {
+    content: "";
+    position: absolute;
+    inset: auto -40% -60% auto;
+    width: 15rem;
+    height: 15rem;
+    background: radial-gradient(circle, rgba(95, 214, 165, .14), transparent 70%);
+    pointer-events: none;
+  }
+
+  .card h3 {
+    font-family: var(--display);
+    font-size: 1.48rem;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    margin: 0;
+  }
+
+  .card h3 a { color: var(--bone); }
+  .card:hover h3 a { color: var(--sap); }
+
+  .card dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: .42rem 1rem;
+    font-size: .87rem;
+  }
+
+  .card dt { color: var(--bone-dim); font-family: var(--mono); font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; align-self: center; }
+  .card dd { margin: 0; }
+
+  .card .headline {
+    margin: 0;
+    padding-top: .9rem;
+    border-top: 1px dashed var(--line);
+    font-size: .93rem;
+    color: var(--bone-dim);
+  }
+  .card .headline b { color: var(--amber); font-weight: 500; }
+
+  .card-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    margin-top: auto;
+    padding-top: .4rem;
+  }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: .72rem;
+    padding: .28rem .6rem;
+    border: 1px solid var(--line);
+    color: var(--bone-dim);
+    transition: color .22s, border-color .22s;
+  }
+  .tag:hover { color: var(--sap); border-color: var(--sap-dim); }
+
+  /* ---------- charts ---------- */
+  figure {
+    margin: 0 0 1.6rem;
+    border: 1px solid var(--line);
+    background: #fff;
+    overflow: hidden;
+  }
+
+  figure img { display: block; width: 100%; height: auto; }
+
+  figcaption {
+    padding: .9rem 1.2rem;
+    background: var(--bark);
+    border-top: 1px solid var(--line);
+    color: var(--bone-dim);
+    font-size: .86rem;
+  }
+
+  details {
+    border: 1px solid var(--line);
+    margin-bottom: .7rem;
+    background: rgba(21, 36, 31, .5);
+  }
+
+  summary {
+    cursor: pointer;
+    padding: 1rem 1.3rem;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    list-style: none;
+  }
+  summary::-webkit-details-marker { display: none; }
+
+  summary::before {
+    content: "+";
+    font-family: var(--mono);
+    color: var(--sap);
+    font-size: 1.1rem;
+  }
+  details[open] summary::before { content: "–"; }
+  summary:hover { color: var(--sap); }
+
+  details .inner { padding: 0 1.3rem 1.3rem; }
+
+  .note {
+    border-left: 2px solid var(--amber);
+    padding: .9rem 1.2rem;
+    background: rgba(240, 185, 84, .06);
+    color: var(--bone-dim);
+    font-size: .93rem;
+    margin-top: 1.6rem;
+  }
+  .note strong { color: var(--bone); font-weight: 500; }
+
+  /* ---------- table ---------- */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .91rem;
+    min-width: 580px;
+  }
+
+  th, td {
+    text-align: left;
+    padding: .85rem 1.1rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  th {
+    font-family: var(--mono);
+    font-size: .73rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--sap-dim);
+    font-weight: 500;
+    background: rgba(7, 12, 10, .6);
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(95, 214, 165, .05); }
+  td code { font-family: var(--mono); font-size: .84rem; color: var(--amber); }
+
+  /* ---------- footer ---------- */
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 3rem 0 2.4rem;
+    color: var(--bone-dim);
+    font-size: .9rem;
+  }
+
+  .footer-grid {
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    margin-bottom: 2.4rem;
+  }
+
+  footer h4 {
+    font-family: var(--mono);
+    font-size: .73rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--sap-dim);
+    margin: 0 0 .8rem;
+    font-weight: 500;
+  }
+
+  footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .45rem; }
+
+  .signature {
+    font-family: var(--display);
+    font-style: italic;
+    font-size: 1.2rem;
+    color: var(--bone);
+    border-top: 1px solid var(--line);
+    padding-top: 1.8rem;
+  }
+
+  /* ---------- motion ---------- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity .7s ease, transform .7s ease;
+  }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .hero::before { animation: none; }
+    .card:hover, .btn:hover, .pill:hover { transform: none; }
+  }
+
+  @media (max-width: 680px) {
+    .topbar nav { display: none; }
+    .hero::before { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="shell">
+    <span class="mark">Groot<span>.</span></span>
+    <nav>
+      <a href="#models">Models</a>
+      <a href="#capabilities">Capabilities</a>
+      <a href="#run">Run</a>
+    </nav>
+    <a class="pill" href="https://huggingface.co/GrootTeam">Hugging Face ↗</a>
+  </div>
+</header>
+
+<main>
+  <section class="hero shell">
+    <img class="hero-logo" src="assets/title.png" alt="Groot" width="6474" height="1980">
+    <h1>Smaller models.<br><em>Serious capabilities.</em></h1>
+    <p class="lede">
+      Groot is a family of four open-weight Mixture-of-Experts models for reasoning,
+      coding and tool use — built from Qwen, GLM and DeepSeek models, then made
+      smaller while keeping the capabilities that matter when there is real work to do.
+    </p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://huggingface.co/GrootTeam">Get the weights</a>
+      <a class="btn btn-ghost" href="#capabilities">See the benchmarks</a>
+      <a class="btn btn-ghost" href="https://github.com/GrootTeam/Groot">GitHub ↗</a>
+    </div>
+
+    <div class="capability-strip">
+      <div class="reveal">
+        <span class="eyebrow">01 / Reasoning</span>
+        <h3>Thinking by default</h3>
+        <p>Thinking-mode models evaluated on demanding reasoning and long-context tasks, with context windows from 256K to 1M tokens.</p>
+      </div>
+      <div class="reveal">
+        <span class="eyebrow">02 / Coding</span>
+        <h3>Repository scale</h3>
+        <p>From terminal workflows to repository-level coding and multi-step software engineering tasks.</p>
+      </div>
+      <div class="reveal">
+        <span class="eyebrow">03 / Tool use</span>
+        <h3>Native tool calling</h3>
+        <p>Evaluated across tool selection, automation and agentic workloads — not just single-turn answers.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="models" class="shell">
+    <div class="section-head">
+      <h2>Four weight classes</h2>
+      <p>
+        The 19B and 65B models each used fewer than 100M tokens of open-source data for
+        post-training. This is post-training on top of the listed base models, not training from scratch.
+      </p>
+    </div>
+
+    <div class="models">
+      <article class="card reveal">
+        <h3><a href="https://huggingface.co/GrootTeam/Groot-19B-A3B-261023">Groot-19B-A3B</a></h3>
+        <dl>
+          <dt>Built from</dt><dd>Qwen3.6-35B-A3B</dd>
+          <dt>Active</dt><dd>~3B / token</dd>
+          <dt>Context</dt><dd>256K</dd>
+        </dl>
+        <p class="headline">
+          Ahead of both Qwen3.6-35B-A3B and Gemma-4-26B-A4B on <b>12 / 16 benchmarks</b>,
+          with <b>23.1%</b> fewer output tokens on average than Qwen3.6.
+        </p>
+        <div class="card-links">
+          <a class="tag" href="https://huggingface.co/GrootTeam/Groot-19B-A3B-261023">BF16</a>
+          <a class="tag" href="https://huggingface.co/GrootTeam/Groot-19B-A3B-261023-FP8">FP8</a>
+          <a class="tag" href="https://huggingface.co/GrootTeam/Groot-19B-A3B-261023-NVFP4">NVFP4</a>
+          <a class="tag" href="https://huggingface.co/GrootTeam/Groot-19B-A3B-261023-GGUF">GGUF</a>
+        </div>
+      </article>
+
+      <article class="card reveal">
+        <h3><a href="https://huggingface.co/GrootTeam/Groot-65B-A6B-261023">Groot-65B-A6B</a></h3>
+        <dl>
+          <dt>Built from</dt><dd>Qwen3.8-Flash-Next</dd>
+          <dt>Active</dt><dd>~6B / token</dd>
+          <dt>Context</dt><dd>256K</dd>
+        </dl>
+        <p class="headline">
+          Ahead of Qwen3.5-122B-A10B on <b>14 / 16 benchmarks</b>, including
+          <b>63.37</b> on Terminal Bench 2.1 and <b>56.11</b> on SWE-bench Verified.
+        </p>
+        <div class="card-links">
+          <a class="tag" href="https://huggingface.co/GrootTeam/Groot-65B-A6B-261023">BF16</a>
+          <a class="tag" href="https://huggingface.co/GrootTeam/Groot-65B-A6B-261023-FP8">FP8</a>
+          <a class="tag" href="https://huggingface.co/GrootTeam/Groot-65B-A6B-261023-NVFP4">NVFP4</a>
+          <a class="tag" href="https://huggingface.co/GrootTeam/Groot-65B-A6B-261023-GGUF">GGUF</a>
+        </div>
+      </article>
+
+      <article class="card reveal">
+        <h3><a href="https://huggingface.co/GrootTeam/Groot-238B-A18B-261023">Groot-238B-A18B</a></h3>
+        <dl>
+          <dt>Built from</dt><dd>GLM-5.3-Flash</dd>
+          <dt>Active</dt><dd>~18B / token</dd>
+          <dt>Context</dt><dd>1M</dd>
+        </dl>
+        <p class="headline">
+          Ahead of both GLM-5.3-Flash and DeepSeek-V4-Flash-0731 on <b>six agentic benchmarks</b>,
+          including <b>65.13</b> on DeepSWE 1.1 and <b>50.18</b> on NL2Repo-Bench.
+        </p>
+        <div class="card-links">
+          <a class="tag" href="https://huggingface.co/GrootTeam/Groot-238B-A18B-261023">FP8</a>
+          <a class="tag" href="https://huggingface.co/GrootTeam/Groot-238B-A18B-261023-GGUF">GGUF</a>
+        </div>
+      </article>
+
+      <article class="card reveal">
+        <h3><a href="https://huggingface.co/GrootTeam/Groot-280B-A16B-261023">Groot-280B-A16B</a></h3>
+        <dl>
+          <dt>Built from</dt><dd>DeepSeek-V4.1-Flash-1017</dd>
+          <dt>Active</dt><dd>~16B decode / ~8B prefill</dd>
+          <dt>Context</dt><dd>1M</dd>
+        </dl>
+        <p class="headline">
+          Ahead of those same two models on <b>8 / 16 benchmarks</b>, with
+          <b>56.71</b> on NL2Repo-Bench and <b>63.47</b> on SWE-bench Pro.
+        </p>
+        <div class="card-links">
+          <a class="tag" href="https://huggingface.co/GrootTeam/Groot-280B-A16B-261023">FP8 / FP4 experts</a>
+          <a class="tag" href="https://huggingface.co/GrootTeam/Groot-280B-A16B-261023-GGUF">GGUF</a>
+        </div>
+      </article>
+    </div>
+
+    <div class="note">
+      <strong>A note on model sizes.</strong> Names follow the model cards' headline parameter
+      conventions, not complete storage or runtime-memory requirements. The 65B release additionally
+      contains a 51B n-gram lookup table and a 1.4B MTP layer; the 280B release additionally contains
+      197B Engram memory and 14B of MTP/draft layers. The 19B and 238B models also have additional
+      0.4B and 5.6B MTP layers. Active parameters are not the same as memory usage.
+    </div>
+  </section>
+
+  <section id="capabilities" class="shell">
+    <div class="section-head">
+      <h2>Size against capability</h2>
+      <p>
+        Our reported evaluations across 16 benchmarks, unweighted — not an independent leaderboard.
+        The full per-model charts include the wins and the losses.
+      </p>
+    </div>
+
+    <figure class="reveal">
+      <img src="assets/scatter_280b.png" alt="Groot model family: headline parameter counts versus the unweighted average across 16 benchmarks" width="4224" height="2256" loading="lazy">
+      <figcaption>Headline parameter counts versus the unweighted 16-benchmark average. Smaller is further left; stronger is higher.</figcaption>
+    </figure>
+
+    <p>
+      Across the 16 evaluation runs, the <b>19B uses 23.1% fewer output tokens</b> on average than
+      Qwen3.6-35B-A3B, and the <b>65B uses 28.3% fewer</b> than Qwen3.8-Flash-Next. These are
+      output-token comparisons, not measured latency or throughput improvements.
+    </p>
+
+    <details class="reveal">
+      <summary>Groot-19B-A3B — full results and output-token comparison</summary>
+      <div class="inner">
+        <figure>
+          <img src="assets/bars_19b.png" alt="Groot-19B-A3B benchmark results across 16 benchmarks" width="4608" height="6168" loading="lazy">
+        </figure>
+        <a href="https://huggingface.co/GrootTeam/Groot-19B-A3B-261023#benchmarks">Model card and evaluation settings ↗</a>
+      </div>
+    </details>
+
+    <details class="reveal">
+      <summary>Groot-65B-A6B — full results and output-token comparison</summary>
+      <div class="inner">
+        <figure>
+          <img src="assets/bars_65b.png" alt="Groot-65B-A6B benchmark results across 16 benchmarks" width="4608" height="6168" loading="lazy">
+        </figure>
+        <a href="https://huggingface.co/GrootTeam/Groot-65B-A6B-261023#benchmarks">Model card and evaluation settings ↗</a>
+      </div>
+    </details>
+
+    <details class="reveal">
+      <summary>Groot-238B-A18B — full results and output-token comparison</summary>
+      <div class="inner">
+        <figure>
+          <img src="assets/bars_238b.png" alt="Groot-238B-A18B benchmark results across 16 benchmarks" width="4608" height="10296" loading="lazy">
+        </figure>
+        <a href="https://huggingface.co/GrootTeam/Groot-238B-A18B-261023#benchmarks">Model card and evaluation settings ↗</a>
+      </div>
+    </details>
+
+    <details class="reveal">
+      <summary>Groot-280B-A16B — full results and output-token comparison</summary>
+      <div class="inner">
+        <figure>
+          <img src="assets/bars_280b.png" alt="Groot-280B-A16B benchmark results across 16 benchmarks" width="4608" height="10296" loading="lazy">
+        </figure>
+        <a href="https://huggingface.co/GrootTeam/Groot-280B-A16B-261023#benchmarks">Model card and evaluation settings ↗</a>
+      </div>
+    </details>
+
+    <div class="note">
+      <strong>How to read the results.</strong> Agent scaffolds, context limits, reasoning effort and
+      sampling settings differ by benchmark and model; the linked cards document those settings.
+      These are not across-the-board wins over the base models — the 65B model's suite average is
+      51.51, below Qwen3.8-Flash-Next's 55.39. Hardware-fit examples in the cards are capacity
+      estimates, not a substitute for testing your own workload.
+    </div>
+  </section>
+
+  <section id="run" class="shell">
+    <div class="section-head">
+      <h2>Run a model</h2>
+      <p>
+        The weights live on Hugging Face. Use the <code>GrootTeam/…</code> repository IDs in your
+        runtime configuration, and consult each card for runtime versions, parsers and memory notes.
+      </p>
+    </div>
+
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>Model</th><th>Available weights</th><th>Setup</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>Groot-19B-A3B-261023</code></td>
+            <td>BF16 · FP8 · NVFP4 · GGUF</td>
+            <td><a href="https://huggingface.co/GrootTeam/Groot-19B-A3B-261023#quickstart">Quickstart ↗</a></td>
+          </tr>
+          <tr>
+            <td><code>Groot-65B-A6B-261023</code></td>
+            <td>BF16 · FP8 · NVFP4 · GGUF</td>
+            <td><a href="https://huggingface.co/GrootTeam/Groot-65B-A6B-261023#quickstart">Quickstart ↗</a></td>
+          </tr>
+          <tr>
+            <td><code>Groot-238B-A18B-261023</code></td>
+            <td>FP8 · GGUF</td>
+            <td><a href="https://huggingface.co/GrootTeam/Groot-238B-A18B-261023#quickstart">Quickstart ↗</a></td>
+          </tr>
+          <tr>
+            <td><code>Groot-280B-A16B-261023</code></td>
+            <td>FP8 / FP4 experts · GGUF</td>
+            <td><a href="https://huggingface.co/GrootTeam/Groot-280B-A16B-261023#quickstart">Quickstart ↗</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="margin-top:1.6rem">
+      Tried Groot on something real? We would like to hear about it — especially the parts a
+      benchmark does not tell us. <a href="https://github.com/GrootTeam/Groot/issues">Open an issue</a>
+      with the model and quantization, runtime version, hardware, context length and a reproducible
+      example where possible. Please leave out credentials and private data.
+    </p>
+  </section>
+</main>
+
+<footer class="shell">
+  <div class="footer-grid">
+    <div>
+      <h4>Models</h4>
+      <ul>
+        <li><a href="https://huggingface.co/GrootTeam/Groot-19B-A3B-261023">Groot-19B-A3B</a></li>
+        <li><a href="https://huggingface.co/GrootTeam/Groot-65B-A6B-261023">Groot-65B-A6B</a></li>
+        <li><a href="https://huggingface.co/GrootTeam/Groot-238B-A18B-261023">Groot-238B-A18B</a></li>
+        <li><a href="https://huggingface.co/GrootTeam/Groot-280B-A16B-261023">Groot-280B-A16B</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Elsewhere</h4>
+      <ul>
+        <li><a href="https://huggingface.co/GrootTeam">Hugging Face ↗</a></li>
+        <li><a href="https://github.com/GrootTeam/Groot">GitHub ↗</a></li>
+        <li><a href="https://github.com/GrootTeam/Groot/issues">Feedback ↗</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Built on</h4>
+      <p style="margin:0">
+        Groot builds on the work of the Qwen, GLM and DeepSeek teams, as well as the
+        open-source evaluation and serving communities.
+      </p>
+    </div>
+    <div>
+      <h4>Model terms</h4>
+      <p style="margin:0">
+        Terms are model-specific: Apache 2.0 for the 19B, Qwen Community 1.0 for the 65B,
+        and MIT for the 238B and 280B. Refer to each model card and its upstream terms
+        before use. This site does not relicense the underlying models.
+      </p>
+    </div>
+  </div>
+  <p class="signature">Small tree. Four weight classes.</p>
+</footer>
+
+<script>
+  (() => {
+    const targets = document.querySelectorAll(".reveal");
+    if (!("IntersectionObserver" in window) ||
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      targets.forEach(el => el.classList.add("visible"));
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry, index) => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target;
+        setTimeout(() => el.classList.add("visible"), index * 70);
+        io.unobserve(el);
+      });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: .12 });
+    targets.forEach(el => io.observe(el));
+  })();
+</script>
+</body>
+</html>
